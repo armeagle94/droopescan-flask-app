@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Droopescan Scanner</title>
+</head>
+<body>
+    <h1>Drupal Droopescan Scanner</h1>
+    <input type="text" id="url" placeholder="Enter Drupal site URL" style="width: 300px;" />
+    <button onclick="startScan()">Start Scan</button>
+
+    <h3>Status: <span id="status">idle</span></h3>
+
+    <textarea id="output" rows="20" cols="80" readonly style="white-space: pre-wrap;"></textarea>
+
+    <script>
+    function startScan() {
+        const url = document.getElementById('url').value.trim();
+        if (!url) {
+            alert("Please enter a URL");
+            return;
+        }
+
+        fetch('/start_scan', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({ url })
+        })
+        .then(res => {
+            if (!res.ok) {
+                alert("Failed to start scan: " + res.statusText);
+                return;
+            }
+            pollProgress();
+        });
+    }
+
+    function pollProgress() {
+        fetch('/progress')
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('status').textContent = data.status;
+            document.getElementById('output').value = data.output.join('\n');
+
+            if (data.status === 'done') {
+                // Auto download report
+                const link = document.createElement('a');
+                link.href = '/download';
+                link.download = 'droopescan_report.txt';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                return;
+            }
+            setTimeout(pollProgress, 1000);
+        });
+    }
+    </script>
+</body>
+</html>
